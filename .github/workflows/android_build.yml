@@ -1,0 +1,46 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Get project URL
+      id: get_url
+      run: |
+        url=$(cat project-to-build)
+        echo "url=$url" >> $GITHUB_OUTPUT
+    
+    - name: Checkout project
+      run: |
+        git clone --depth 1 ${{ steps.get_url.outputs.url }} project
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+    
+    - name: Build APK
+      run: |
+        cd project
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        else
+          echo "No gradlew found"
+          exit 1
+        fi
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: my-build-apk
+        path: project/app/build/outputs/apk/debug/*.apk
